@@ -5,7 +5,13 @@
 
 import * as React from 'react';
 import { createContext, ReactNode, RefCallback, useContext, useEffect, useLayoutEffect, useMemo } from 'react';
-import { ScrollToBottom, StopScroll, StickToBottomOptions, useStickToBottom } from './useStickToBottom.js';
+import {
+  ScrollToBottom,
+  StopScroll,
+  StickToBottomOptions,
+  useStickToBottom,
+  GetTargetScrollTop,
+} from './useStickToBottom.js';
 
 export interface StickToBottomContext {
   contentRef: RefCallback<HTMLDivElement>;
@@ -15,6 +21,7 @@ export interface StickToBottomContext {
   isAtBottom: boolean;
   isNearBottom: boolean;
   escapedFromLock: boolean;
+  targetScrollTop?: GetTargetScrollTop | null;
 }
 
 const StickToBottomContext = createContext<StickToBottomContext | null>(null);
@@ -26,7 +33,7 @@ export interface StickToBottomProps
   children: ((context: StickToBottomContext) => ReactNode) | ReactNode;
 }
 
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export function StickToBottom({
   instance,
@@ -36,9 +43,17 @@ export function StickToBottom({
   mass,
   damping,
   stiffness,
-  targetScrollTop,
+  targetScrollTop: currentTargetScrollTop,
   ...props
 }: StickToBottomProps) {
+  const targetScrollTop = React.useCallback<GetTargetScrollTop>(
+    (target, elements) => {
+      const get = context.targetScrollTop ?? currentTargetScrollTop;
+      return get?.(target, elements) ?? target;
+    },
+    [currentTargetScrollTop]
+  );
+
   const defaultInstance = useStickToBottom({
     mass,
     damping,
@@ -47,6 +62,7 @@ export function StickToBottom({
     initial,
     targetScrollTop,
   });
+
   const { scrollRef, contentRef, scrollToBottom, stopScroll, isAtBottom, isNearBottom, escapedFromLock } =
     instance ?? defaultInstance;
 
