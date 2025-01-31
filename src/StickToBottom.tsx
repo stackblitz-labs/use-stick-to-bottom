@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as React from 'react';
-import { createContext, ReactNode, RefCallback, useContext, useEffect, useLayoutEffect, useMemo } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   ScrollToBottom,
   StopScroll,
@@ -14,8 +14,8 @@ import {
 } from './useStickToBottom.js';
 
 export interface StickToBottomContext {
-  contentRef: RefCallback<HTMLDivElement>;
-  scrollRef: RefCallback<HTMLDivElement>;
+  contentRef: React.MutableRefObject<HTMLElement | null> & React.RefCallback<HTMLElement>;
+  scrollRef: React.MutableRefObject<HTMLElement | null> & React.RefCallback<HTMLElement>;
   scrollToBottom: ScrollToBottom;
   stopScroll: StopScroll;
   isAtBottom: boolean;
