@@ -13,7 +13,7 @@ import {
   type RefCallback,
 } from 'react';
 
-interface StickToBottomState {
+export interface StickToBottomState {
   scrollTop: number;
   lastScrollTop?: number;
   ignoreScrollToTop?: number;
@@ -510,6 +510,7 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
     isAtBottom: isAtBottom || isNearBottom,
     isNearBottom,
     escapedFromLock,
+    state,
   };
 };
 

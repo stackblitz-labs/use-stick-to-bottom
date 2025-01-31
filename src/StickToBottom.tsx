@@ -11,6 +11,7 @@ import {
   StickToBottomOptions,
   useStickToBottom,
   GetTargetScrollTop,
+  StickToBottomState,
 } from './useStickToBottom.js';
 
 export interface StickToBottomContext {
@@ -22,6 +23,7 @@ export interface StickToBottomContext {
   isNearBottom: boolean;
   escapedFromLock: boolean;
   targetScrollTop?: GetTargetScrollTop | null;
+  state: StickToBottomState;
 }
 
 const StickToBottomContext = createContext<StickToBottomContext | null>(null);
@@ -63,7 +65,7 @@ export function StickToBottom({
     targetScrollTop,
   });
 
-  const { scrollRef, contentRef, scrollToBottom, stopScroll, isAtBottom, isNearBottom, escapedFromLock } =
+  const { scrollRef, contentRef, scrollToBottom, stopScroll, isAtBottom, isNearBottom, escapedFromLock, state } =
     instance ?? defaultInstance;
 
   const context = useMemo<StickToBottomContext>(
@@ -75,8 +77,9 @@ export function StickToBottom({
       isNearBottom,
       escapedFromLock,
       contentRef,
+      state,
     }),
-    [scrollToBottom, isAtBottom, contentRef, escapedFromLock]
+    [scrollToBottom, isAtBottom, contentRef, escapedFromLock, state]
   );
 
   useIsomorphicLayoutEffect(() => {
