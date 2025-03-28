@@ -15,7 +15,9 @@
   "scripts": {
     "dev": "vite",
     "build": "rm -rf dist > /dev/null 2>&1; tsc -b",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "yarn build",
+    "lint": "biome check",
+    "lint:fix": "pnpm lint --write"
   },
   "repository": {
     "type": "git",
@@ -40,6 +42,7 @@
     "tailwindcss": "^3.4.10",
     "typescript": "^5.5.3",
     "vite": "^5.4.1",
-    "vite-plugin-dts": "^4.2.1"
+    "vite-plugin-dts": "^4.2.1",
+    "@biomejs/biome": "^1.9.4"
   }
 }
