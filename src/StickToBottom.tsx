@@ -41,7 +41,7 @@ const StickToBottomContext = createContext<StickToBottomContext | null>(null);
 export interface StickToBottomProps
 	extends Omit<React.HTMLAttributes<HTMLDivElement>, "children">,
 		StickToBottomOptions {
-	ref?: React.Ref<StickToBottomContext>;
+	contextRef?: React.Ref<StickToBottomContext>;
 	instance?: ReturnType<typeof useStickToBottom>;
 	children: ((context: StickToBottomContext) => ReactNode) | ReactNode;
 }
@@ -58,7 +58,7 @@ export function StickToBottom({
 	damping,
 	stiffness,
 	targetScrollTop: currentTargetScrollTop,
-	ref,
+	contextRef,
 	...props
 }: StickToBottomProps) {
 	const targetScrollTop = React.useCallback<GetTargetScrollTop>(
@@ -112,7 +112,7 @@ export function StickToBottom({
 		],
 	);
 
-	useImperativeHandle(ref, () => context, [context]);
+	useImperativeHandle(contextRef, () => context, [context]);
 
 	useIsomorphicLayoutEffect(() => {
 		if (!scrollRef.current) {
