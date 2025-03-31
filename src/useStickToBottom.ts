@@ -132,6 +132,20 @@ const STICK_TO_BOTTOM_OFFSET_PX = 70;
 const SIXTY_FPS_INTERVAL_MS = 1000 / 60;
 const RETAIN_ANIMATION_DURATION_MS = 350;
 
+let mouseDown = false;
+
+globalThis.document?.addEventListener("mousedown", () => {
+	mouseDown = true;
+});
+
+globalThis.document?.addEventListener("mouseup", () => {
+	mouseDown = false;
+});
+
+globalThis.document?.addEventListener("click", () => {
+	mouseDown = false;
+});
+
 export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 	const [escapedFromLock, updateEscapedFromLock] = useState(false);
 	const [isAtBottom, updateIsAtBottom] = useState(options.initial !== false);
@@ -274,7 +288,7 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 						state.lastTick = tick;
 					}
 
-					if (waitElapsed > Date.now()) {
+					if (mouseDown || waitElapsed > Date.now()) {
 						return next();
 					}
 
