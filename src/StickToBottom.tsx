@@ -30,7 +30,6 @@ export interface StickToBottomContext {
 	scrollToBottom: ScrollToBottom;
 	stopScroll: StopScroll;
 	isAtBottom: boolean;
-	isNearBottom: boolean;
 	escapedFromLock: boolean;
 	targetScrollTop?: GetTargetScrollTop | null;
 	state: StickToBottomState;
@@ -84,7 +83,6 @@ export function StickToBottom({
 		scrollToBottom,
 		stopScroll,
 		isAtBottom,
-		isNearBottom,
 		escapedFromLock,
 		state,
 	} = instance ?? defaultInstance;
@@ -95,7 +93,6 @@ export function StickToBottom({
 			stopScroll,
 			scrollRef,
 			isAtBottom,
-			isNearBottom,
 			escapedFromLock,
 			contentRef,
 			state,
@@ -104,7 +101,6 @@ export function StickToBottom({
 			scrollToBottom,
 			isAtBottom,
 			contentRef,
-			isNearBottom,
 			scrollRef,
 			stopScroll,
 			escapedFromLock,
