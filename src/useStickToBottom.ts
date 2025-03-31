@@ -160,7 +160,7 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 		}
 
 		const selection = window.getSelection();
-		if (!selection) {
+		if (!selection || !selection.rangeCount) {
 			return false;
 		}
 
