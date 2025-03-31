@@ -12,6 +12,7 @@ import {
 	useImperativeHandle,
 	useLayoutEffect,
 	useMemo,
+	useRef,
 } from "react";
 import {
 	type GetTargetScrollTop,
@@ -31,7 +32,8 @@ export interface StickToBottomContext {
 	stopScroll: StopScroll;
 	isAtBottom: boolean;
 	escapedFromLock: boolean;
-	targetScrollTop?: GetTargetScrollTop | null;
+	get targetScrollTop(): GetTargetScrollTop | null;
+	set targetScrollTop(targetScrollTop: GetTargetScrollTop | null);
 	state: StickToBottomState;
 }
 
@@ -60,9 +62,11 @@ export function StickToBottom({
 	contextRef,
 	...props
 }: StickToBottomProps) {
+	const customTargetScrollTop = useRef<GetTargetScrollTop | null>(null);
+
 	const targetScrollTop = React.useCallback<GetTargetScrollTop>(
 		(target, elements) => {
-			const get = context.targetScrollTop ?? currentTargetScrollTop;
+			const get = context?.targetScrollTop ?? currentTargetScrollTop;
 			return get?.(target, elements) ?? target;
 		},
 		[currentTargetScrollTop],
@@ -96,6 +100,12 @@ export function StickToBottom({
 			escapedFromLock,
 			contentRef,
 			state,
+			get targetScrollTop() {
+				return customTargetScrollTop.current;
+			},
+			set targetScrollTop(targetScrollTop: GetTargetScrollTop | null) {
+				customTargetScrollTop.current = targetScrollTop;
+			},
 		}),
 		[
 			scrollToBottom,

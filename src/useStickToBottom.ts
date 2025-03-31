@@ -154,6 +154,23 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 	const optionsRef = useRef<StickToBottomOptions>(null!);
 	optionsRef.current = options;
 
+	const isSelecting = useCallback(() => {
+		if (!mouseDown) {
+			return false;
+		}
+
+		const selection = window.getSelection();
+		if (!selection) {
+			return false;
+		}
+
+		const range = selection.getRangeAt(0);
+		return (
+			range.commonAncestorContainer.contains(scrollRef.current) ||
+			scrollRef.current?.contains(range.commonAncestorContainer)
+		);
+	}, []);
+
 	const setIsAtBottom = useCallback((isAtBottom: boolean) => {
 		state.isAtBottom = isAtBottom;
 		updateIsAtBottom(isAtBottom);
@@ -288,7 +305,11 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 						state.lastTick = tick;
 					}
 
-					if (mouseDown || waitElapsed > Date.now()) {
+					if (isSelecting()) {
+						return next();
+					}
+
+					if (waitElapsed > Date.now()) {
 						return next();
 					}
 
@@ -365,7 +386,7 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 
 			return next();
 		},
-		[setIsAtBottom, state],
+		[setIsAtBottom, isSelecting, state],
 	);
 
 	const stopScroll = useCallback(() => {
@@ -411,6 +432,12 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 					return;
 				}
 
+				if (isSelecting()) {
+					setEscapedFromLock(true);
+					setIsAtBottom(false);
+					return;
+				}
+
 				const isScrollingDown = scrollTop > lastScrollTop;
 				const isScrollingUp = scrollTop < lastScrollTop;
 
@@ -433,7 +460,7 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 				}
 			}, 1);
 		},
-		[setEscapedFromLock, setIsAtBottom, state],
+		[setEscapedFromLock, setIsAtBottom, isSelecting, state],
 	);
 
 	const handleWheel = useCallback(
