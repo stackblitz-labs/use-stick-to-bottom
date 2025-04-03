@@ -4,7 +4,10 @@ Stable - Bumped version to signify a release with the new pausing feature https:
 
 # 1.0.52
 
-Stable - added pausing feature
+Stable - added pausing feature.
+
+- Also addressed in one of these releases, the `targetScrollTop` option and made it more functional.
+  - This is used in https://github.com/samdenty/react-ai-flow to delay the scrolling of the hook to the last revealed animated element
 
 # 1.0.47 - 1.0.51
 
