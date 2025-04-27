@@ -62,9 +62,10 @@ function Messages({ animation, speed }: { animation: ScrollBehavior; speed: numb
 // Document scroll demo content
 function DocumentScrollDemoContent({ speed }: { speed: number }) {
   const messages = useFakeMessages(speed);
-  const { stopScroll, contentRef } = useStickToBottomContext();
+  const { contentRef } = useStickToBottomContext();
   return (
     <>
+      
       <div ref={contentRef} className="flex flex-col gap-4 p-6">
         {[...Array(10)].map((_, i) => (
           <Message key={i}>
@@ -77,11 +78,7 @@ function DocumentScrollDemoContent({ speed }: { speed: number }) {
         ))}
       </div>
       <ScrollToBottom />
-      <div className="flex justify-center pt-4">
-        <button className="rounded bg-slate-600 text-white px-4 py-2" onClick={() => stopScroll()}>
-          Stop Scroll
-        </button>
-      </div>
+
     </>
   );
 }

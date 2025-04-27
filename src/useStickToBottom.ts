@@ -158,7 +158,8 @@ globalThis.document?.addEventListener("click", () => {
 const getDocumentScrollElement = (): HTMLElement => {
 	// Use documentElement first, fallback to body (needed for some browsers like Safari)
 	if (
-		document.documentElement.scrollHeight > document.documentElement.clientHeight ||
+		document.documentElement.scrollHeight >
+			document.documentElement.clientHeight ||
 		document.documentElement.scrollTop > 0
 	) {
 		return document.documentElement;
@@ -191,6 +192,14 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 			scrollRef.current?.contains(range.commonAncestorContainer)
 		);
 	}, []);
+
+	const scrollStateRef = useRef<{
+		lastScrollTop: number;
+		ignoreScrollToTop?: number;
+	}>({
+		lastScrollTop: 0,
+		ignoreScrollToTop: undefined,
+	});
 
 	const setIsAtBottom = useCallback((isAtBottom: boolean) => {
 		state.isAtBottom = isAtBottom;
@@ -263,14 +272,14 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 			| { targetScrollTop: number; calculatedScrollTop: number }
 			| undefined;
 
-return {
-escapedFromLock,
-isAtBottom,
-resizeDifference: 0,
-accumulated: 0,
-velocity: 0,
+		return {
+			escapedFromLock,
+			isAtBottom,
+			resizeDifference: 0,
+			accumulated: 0,
+			velocity: 0,
 
-get scrollTop() {
+			get scrollTop() {
 				return getScrollTop();
 			},
 			set scrollTop(scrollTop: number) {
@@ -314,7 +323,10 @@ get scrollTop() {
 
 				const calculatedScrollTop = Math.max(
 					Math.min(
-						optionsRef.current.targetScrollTop(targetScrollTop, contextElements),
+						optionsRef.current.targetScrollTop(
+							targetScrollTop,
+							contextElements,
+						),
 						targetScrollTop,
 					),
 					0,
@@ -480,54 +492,35 @@ get scrollTop() {
 				return;
 			}
 
-			const { scrollTop, ignoreScrollToTop } = state;
-			let { lastScrollTop = scrollTop } = state;
+			const currentScrollTop = getScrollTop();
+			// Use scrollStateRef instead of state for scroll position tracking
+			let { lastScrollTop, ignoreScrollToTop } = scrollStateRef.current;
+			scrollStateRef.current.lastScrollTop = currentScrollTop;
+			scrollStateRef.current.ignoreScrollToTop = undefined;
 
-		const currentScrollTop = getScrollTop(); // Use helper
-		state.lastScrollTop = currentScrollTop;
-		state.ignoreScrollToTop = undefined;
-
-		if (ignoreScrollToTop && ignoreScrollToTop > currentScrollTop) {
-			/**
-			 * When the user scrolls up while the animation plays, the `scrollTop` may
-				 * not come in separate events; if this happens, to make sure `isScrollingUp`
-				 * is correct, set the lastScrollTop to the ignored event.
-				 */
+			if (ignoreScrollToTop && ignoreScrollToTop > currentScrollTop) {
 				lastScrollTop = ignoreScrollToTop;
 			}
 
 			setIsNearBottom(state.isNearBottom);
 
-			/**
-			 * Scroll events may come before a ResizeObserver event,
-			 * so in order to ignore resize events correctly we use a
-			 * timeout.
-			 *
-		 * @see https://github.com/WICG/resize-observer/issues/25#issuecomment-248757228
-		 */
-		setTimeout(() => {
-			const currentScrollTop = getScrollTop(); // Get fresh value inside timeout
-			/**
-			 * When theres a resize difference ignore the resize event.
-			 */
-			// Check against currentScrollTop inside timeout
-			if (state.resizeDifference || currentScrollTop === ignoreScrollToTop) {
-				return;
-			}
+			setTimeout(() => {
+				const currentScrollTop = getScrollTop();
+				if (state.resizeDifference || currentScrollTop === ignoreScrollToTop) {
+					return;
+				}
 
-			if (isSelecting()) {
+				if (isSelecting()) {
 					setEscapedFromLock(true);
 					setIsAtBottom(false);
-				return;
-			}
+					return;
+				}
 
-			// Use currentScrollTop for comparisons
-			const isScrollingDown = currentScrollTop > lastScrollTop;
-			const isScrollingUp = currentScrollTop < lastScrollTop;
+				const isScrollingDown = currentScrollTop > lastScrollTop;
+				const isScrollingUp = currentScrollTop < lastScrollTop;
 
-			if (state.animation?.ignoreEscapes) {
-				// Setting scrollTop might need adjustment based on mode
-				setScrollTop(lastScrollTop);
+				if (state.animation?.ignoreEscapes) {
+					setScrollTop(lastScrollTop);
 					return;
 				}
 
@@ -545,7 +538,14 @@ get scrollTop() {
 				}
 			}, 1);
 		},
-		[setEscapedFromLock, setIsAtBottom, isSelecting, state],
+		[
+			setEscapedFromLock,
+			setIsAtBottom,
+			isSelecting,
+			state,
+			getScrollTop,
+			setScrollTop,
+		],
 	);
 
 	const handleWheel = useCallback(
@@ -590,13 +590,7 @@ get scrollTop() {
 				}
 			}
 		},
-		[
-			scrollMode,
-			state,
-			setEscapedFromLock,
-			setIsAtBottom,
-			getScrollDimensions,
-		], // Added dependencies
+		[scrollMode, state, setEscapedFromLock, setIsAtBottom, getScrollDimensions], // Added dependencies
 	);
 
 	// Effect for managing window listeners in document mode
@@ -610,7 +604,6 @@ get scrollTop() {
 			if (!state.escapedFromLock && state.isNearBottom) {
 				setIsAtBottom(true);
 			}
-
 
 			return () => {
 				window.removeEventListener("scroll", handleScroll);
@@ -643,24 +636,24 @@ get scrollTop() {
 
 		let previousHeight: number | undefined;
 
-			state.resizeObserver = new ResizeObserver(([entry]) => {
-				// Ensure contentRef is still valid before proceeding
-				if (!contentRef.current) return;
+		state.resizeObserver = new ResizeObserver(([entry]) => {
+			// Ensure contentRef is still valid before proceeding
+			if (!contentRef.current) return;
 
-				const { height } = entry.contentRect;
-				const difference = height - (previousHeight ?? height);
+			const { height } = entry.contentRect;
+			const difference = height - (previousHeight ?? height);
 
 			state.resizeDifference = difference;
 
 			/**
 			 * Sometimes the browser can overscroll past the target,
 			 * so check for this and adjust appropriately.
-				 */
-				const currentScrollTop = getScrollTop();
-				const currentTargetScrollTop = state.targetScrollTop; // Use getter
-				if (currentScrollTop > currentTargetScrollTop) {
-					setScrollTop(currentTargetScrollTop); // Use setter
-				}
+			 */
+			const currentScrollTop = getScrollTop();
+			const currentTargetScrollTop = state.targetScrollTop; // Use getter
+			if (currentScrollTop > currentTargetScrollTop) {
+				setScrollTop(currentTargetScrollTop); // Use setter
+			}
 
 			setIsNearBottom(state.isNearBottom);
 
