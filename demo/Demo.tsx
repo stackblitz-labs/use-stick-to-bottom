@@ -2,21 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { StickToBottom, useStickToBottomContext } from '../src/StickToBottom';
 import { useFakeMessages } from './useFakeMessages';
 
-// ScrollToBottom button for element-scroll mode
-function ElementScrollToBottom() {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-  return (
-    !isAtBottom && (
-      <button
-        className="absolute i-ph-arrow-circle-down-fill text-4xl rounded-lg left-[50%] translate-x-[-50%] bottom-0"
-        onClick={() => scrollToBottom()}
-      />
-    )
-  );
-}
 
-// ScrollToBottom button for document-scroll mode
-function DocumentScrollToBottom() {
+
+function ScrollToBottom() {
   const { isAtBottom, scrollToBottom } = useStickToBottomContext();
   return (
     !isAtBottom && (
@@ -44,7 +32,7 @@ function MessagesContent({ messages }: { messages: ReactNode[][] }) {
             <Message key={i}>{message}</Message>
           ))}
         </StickToBottom.Content>
-        <ElementScrollToBottom />
+        <ScrollToBottom />
       </div>
       <div className="flex justify-center pt-4">
         <button className="rounded bg-slate-600 text-white px-4 py-2" onClick={() => stopScroll()}>
@@ -88,7 +76,7 @@ function DocumentScrollDemoContent({ speed }: { speed: number }) {
           <Message key={i}>{message}</Message>
         ))}
       </div>
-      <DocumentScrollToBottom />
+      <ScrollToBottom />
       <div className="flex justify-center pt-4">
         <button className="rounded bg-slate-600 text-white px-4 py-2" onClick={() => stopScroll()}>
           Stop Scroll
