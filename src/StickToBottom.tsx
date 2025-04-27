@@ -35,6 +35,7 @@ export interface StickToBottomContext {
 	get targetScrollTop(): GetTargetScrollTop | null;
 	set targetScrollTop(targetScrollTop: GetTargetScrollTop | null);
 	state: StickToBottomState;
+	scrollMode: "element" | "document"; // Add scrollMode to context
 }
 
 const StickToBottomContext = createContext<StickToBottomContext | null>(null);
@@ -45,6 +46,7 @@ export interface StickToBottomProps
 	contextRef?: React.Ref<StickToBottomContext>;
 	instance?: ReturnType<typeof useStickToBottom>;
 	children: ((context: StickToBottomContext) => ReactNode) | ReactNode;
+	scrollMode?: "element" | "document"; // Add scrollMode prop
 }
 
 const useIsomorphicLayoutEffect =
@@ -59,6 +61,7 @@ export function StickToBottom({
 	damping,
 	stiffness,
 	targetScrollTop: currentTargetScrollTop,
+	scrollMode = "element", // Destructure scrollMode prop with default
 	contextRef,
 	...props
 }: StickToBottomProps) {
@@ -79,6 +82,7 @@ export function StickToBottom({
 		resize,
 		initial,
 		targetScrollTop,
+		scrollMode, // Pass scrollMode to the hook
 	});
 
 	const {
@@ -89,7 +93,13 @@ export function StickToBottom({
 		isAtBottom,
 		escapedFromLock,
 		state,
+		// Destructure scrollMode from hook result (though we already have it from props)
+		// Might be useful if using a passed-in instance
+		scrollMode: instanceScrollMode,
 	} = instance ?? defaultInstance;
+
+	// Use the scrollMode passed via props primarily, fallback to instance if provided externally
+	const effectiveScrollMode = instance ? instanceScrollMode : scrollMode;
 
 	const context = useMemo<StickToBottomContext>(
 		() => ({
@@ -100,6 +110,7 @@ export function StickToBottom({
 			escapedFromLock,
 			contentRef,
 			state,
+			scrollMode: effectiveScrollMode, // Add scrollMode to context value
 			get targetScrollTop() {
 				return customTargetScrollTop.current;
 			},
@@ -115,20 +126,21 @@ export function StickToBottom({
 			stopScroll,
 			escapedFromLock,
 			state,
+			effectiveScrollMode, // Add effectiveScrollMode to dependency array
 		],
 	);
 
 	useImperativeHandle(contextRef, () => context, [context]);
 
+	// Conditionally apply overflow style only in element mode
 	useIsomorphicLayoutEffect(() => {
-		if (!scrollRef.current) {
-			return;
+		if (effectiveScrollMode === "element" && scrollRef.current) {
+			if (getComputedStyle(scrollRef.current).overflow === "visible") {
+				scrollRef.current.style.overflow = "auto";
+			}
 		}
-
-		if (getComputedStyle(scrollRef.current).overflow === "visible") {
-			scrollRef.current.style.overflow = "auto";
-		}
-	}, []);
+		// Add effectiveScrollMode to dependency array
+	}, [effectiveScrollMode]);
 
 	return (
 		<StickToBottomContext.Provider value={context}>
@@ -148,6 +160,16 @@ export namespace StickToBottom {
 	export function Content({ children, ...props }: ContentProps) {
 		const context = useStickToBottomContext();
 
+		// In 'document' mode, don't render the outer scroll div
+		if (context.scrollMode === "document") {
+			return (
+				<div {...props} ref={context.contentRef}>
+					{typeof children === "function" ? children(context) : children}
+				</div>
+			);
+		}
+
+		// Default 'element' mode rendering
 		return (
 			<div
 				ref={context.scrollRef}

@@ -8,6 +8,7 @@ import {
 	type MutableRefObject,
 	type RefCallback,
 	useCallback,
+	useEffect, // <-- Import useEffect
 	useMemo,
 	useRef,
 	useState,
@@ -82,6 +83,13 @@ export interface StickToBottomOptions extends SpringAnimation {
 	resize?: Animation;
 	initial?: Animation | boolean;
 	targetScrollTop?: GetTargetScrollTop;
+	/**
+	 * Determines whether scrolling is handled by a specific element or the document body.
+	 * - 'element': Uses the `scrollRef` element for scrolling (default).
+	 * - 'document': Uses `document.documentElement` or `document.body` for scrolling.
+	 * @default 'element'
+	 */
+	scrollMode?: "element" | "document";
 }
 
 export type ScrollToBottomOptions =
@@ -146,7 +154,21 @@ globalThis.document?.addEventListener("click", () => {
 	mouseDown = false;
 });
 
+// Helper to get the document's scroll element
+const getDocumentScrollElement = (): HTMLElement => {
+	// Use documentElement first, fallback to body (needed for some browsers like Safari)
+	if (
+		document.documentElement.scrollHeight >
+			document.documentElement.clientHeight ||
+		document.documentElement.scrollTop > 0
+	) {
+		return document.documentElement;
+	}
+	return document.body;
+};
+
 export const useStickToBottom = (options: StickToBottomOptions = {}) => {
+	const { scrollMode = "element" } = options; // Default to 'element'
 	const [escapedFromLock, updateEscapedFromLock] = useState(false);
 	const [isAtBottom, updateIsAtBottom] = useState(options.initial !== false);
 	const [isNearBottom, setIsNearBottom] = useState(false);
@@ -171,6 +193,14 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 		);
 	}, []);
 
+	const scrollStateRef = useRef<{
+		lastScrollTop: number;
+		ignoreScrollToTop?: number;
+	}>({
+		lastScrollTop: 0,
+		ignoreScrollToTop: undefined,
+	});
+
 	const setIsAtBottom = useCallback((isAtBottom: boolean) => {
 		state.isAtBottom = isAtBottom;
 		updateIsAtBottom(isAtBottom);
@@ -180,6 +210,61 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 		state.escapedFromLock = escapedFromLock;
 		updateEscapedFromLock(escapedFromLock);
 	}, []);
+
+	const getScrollElement = useCallback((): HTMLElement | null => {
+		if (scrollMode === "document") {
+			return getDocumentScrollElement();
+		}
+		return scrollRef.current;
+	}, [scrollMode]);
+
+	const getScrollTop = useCallback((): number => {
+		if (scrollMode === "document") {
+			// Handle potential undefined during SSR or initial render
+			return typeof window !== "undefined" ? window.scrollY : 0;
+		}
+		return scrollRef.current?.scrollTop ?? 0;
+	}, [scrollMode]);
+
+	const setScrollTop = useCallback(
+		(scrollTop: number) => {
+			if (scrollMode === "document") {
+				if (typeof window !== "undefined") {
+					window.scrollTo({ top: scrollTop, behavior: "instant" });
+					// Directly setting might be needed if scrollTo doesn't trigger ignoreScrollToTop correctly
+					const scrollElement = getDocumentScrollElement();
+					if (scrollElement) {
+						state.ignoreScrollToTop = scrollElement.scrollTop;
+					}
+				}
+			} else if (scrollRef.current) {
+				scrollRef.current.scrollTop = scrollTop;
+				state.ignoreScrollToTop = scrollRef.current.scrollTop;
+			}
+		},
+		// state dependency removed as it causes infinite loops, ignoreScrollToTop is set directly
+		// State dependency removed again, as it caused 'used before declaration' error.
+		// The setter only *writes* to state.ignoreScrollToTop, doesn't read it first.
+		[scrollMode],
+	);
+
+	// Add explicit return type
+	const getScrollDimensions = useCallback((): {
+		scrollHeight: number;
+		clientHeight: number;
+	} => {
+		if (scrollMode === "document") {
+			const scrollElement = getDocumentScrollElement();
+			return {
+				scrollHeight: scrollElement?.scrollHeight ?? 0,
+				clientHeight: window.innerHeight ?? 0,
+			};
+		}
+		return {
+			scrollHeight: scrollRef.current?.scrollHeight ?? 0,
+			clientHeight: scrollRef.current?.clientHeight ?? 0,
+		};
+	}, [scrollMode]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: not needed
 	const state = useMemo<StickToBottomState>(() => {
@@ -193,35 +278,36 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 			resizeDifference: 0,
 			accumulated: 0,
 			velocity: 0,
-			listeners: new Set(),
 
 			get scrollTop() {
-				return scrollRef.current?.scrollTop ?? 0;
+				return getScrollTop();
 			},
 			set scrollTop(scrollTop: number) {
-				if (scrollRef.current) {
-					scrollRef.current.scrollTop = scrollTop;
-					state.ignoreScrollToTop = scrollRef.current.scrollTop;
-				}
+				setScrollTop(scrollTop);
 			},
 
 			get targetScrollTop() {
-				if (!scrollRef.current || !contentRef.current) {
+				const { scrollHeight, clientHeight } = getScrollDimensions();
+				// Ensure contentRef exists if needed for calculation, though less critical in document mode
+				if (scrollMode === "element" && !contentRef.current) {
 					return 0;
 				}
-
-				return (
-					scrollRef.current.scrollHeight - 1 - scrollRef.current.clientHeight
-				);
+				return Math.max(0, scrollHeight - 1 - clientHeight);
 			},
 			get calculatedTargetScrollTop() {
-				if (!scrollRef.current || !contentRef.current) {
+				const { targetScrollTop } = this;
+				const scrollElement = getScrollElement(); // Get current scroll element
+
+				// Ensure contentRef exists if needed for calculation
+				if (scrollMode === "element" && !contentRef.current) {
+					return 0;
+				}
+				// Ensure scrollElement exists for document mode calculation context
+				if (scrollMode === "document" && !scrollElement) {
 					return 0;
 				}
 
-				const { targetScrollTop } = this;
-
-				if (!options.targetScrollTop) {
+				if (!optionsRef.current.targetScrollTop) {
 					return targetScrollTop;
 				}
 
@@ -229,12 +315,18 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 					return lastCalculation.calculatedScrollTop;
 				}
 
+				// Provide potentially null scrollElement to targetScrollTop callback
+				const contextElements: ScrollElements = {
+					scrollElement: scrollElement!, // Assert non-null based on checks above
+					contentElement: contentRef.current!, // Assert non-null for element mode, might be null otherwise but callback should handle
+				};
+
 				const calculatedScrollTop = Math.max(
 					Math.min(
-						options.targetScrollTop(targetScrollTop, {
-							scrollElement: scrollRef.current,
-							contentElement: contentRef.current,
-						}),
+						optionsRef.current.targetScrollTop(
+							targetScrollTop,
+							contextElements,
+						),
 						targetScrollTop,
 					),
 					0,
@@ -400,35 +492,21 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 				return;
 			}
 
-			const { scrollTop, ignoreScrollToTop } = state;
-			let { lastScrollTop = scrollTop } = state;
+			const currentScrollTop = getScrollTop();
+			// Use scrollStateRef instead of state for scroll position tracking
+			let { lastScrollTop, ignoreScrollToTop } = scrollStateRef.current;
+			scrollStateRef.current.lastScrollTop = currentScrollTop;
+			scrollStateRef.current.ignoreScrollToTop = undefined;
 
-			state.lastScrollTop = scrollTop;
-			state.ignoreScrollToTop = undefined;
-
-			if (ignoreScrollToTop && ignoreScrollToTop > scrollTop) {
-				/**
-				 * When the user scrolls up while the animation plays, the `scrollTop` may
-				 * not come in separate events; if this happens, to make sure `isScrollingUp`
-				 * is correct, set the lastScrollTop to the ignored event.
-				 */
+			if (ignoreScrollToTop && ignoreScrollToTop > currentScrollTop) {
 				lastScrollTop = ignoreScrollToTop;
 			}
 
 			setIsNearBottom(state.isNearBottom);
 
-			/**
-			 * Scroll events may come before a ResizeObserver event,
-			 * so in order to ignore resize events correctly we use a
-			 * timeout.
-			 *
-			 * @see https://github.com/WICG/resize-observer/issues/25#issuecomment-248757228
-			 */
 			setTimeout(() => {
-				/**
-				 * When theres a resize difference ignore the resize event.
-				 */
-				if (state.resizeDifference || scrollTop === ignoreScrollToTop) {
+				const currentScrollTop = getScrollTop();
+				if (state.resizeDifference || currentScrollTop === ignoreScrollToTop) {
 					return;
 				}
 
@@ -438,11 +516,11 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 					return;
 				}
 
-				const isScrollingDown = scrollTop > lastScrollTop;
-				const isScrollingUp = scrollTop < lastScrollTop;
+				const isScrollingDown = currentScrollTop > lastScrollTop;
+				const isScrollingUp = currentScrollTop < lastScrollTop;
 
 				if (state.animation?.ignoreEscapes) {
-					state.scrollTop = lastScrollTop;
+					setScrollTop(lastScrollTop);
 					return;
 				}
 
@@ -460,45 +538,94 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 				}
 			}, 1);
 		},
-		[setEscapedFromLock, setIsAtBottom, isSelecting, state],
+		[
+			setEscapedFromLock,
+			setIsAtBottom,
+			isSelecting,
+			state,
+			getScrollTop,
+			setScrollTop,
+		],
 	);
 
 	const handleWheel = useCallback(
-		({ target, deltaY }: WheelEvent) => {
-			let element = target as HTMLElement;
-
-			while (!["scroll", "auto"].includes(getComputedStyle(element).overflow)) {
-				if (!element.parentElement) {
-					return;
+		(event: WheelEvent) => {
+			// In document mode, always check deltaY from the event.
+			// In element mode, check if the target is within the scrollRef.
+			if (scrollMode === "document") {
+				// Access deltaY from the event object
+				if (event.deltaY < 0 && !state.animation?.ignoreEscapes) {
+					const { scrollHeight, clientHeight } = getScrollDimensions();
+					if (scrollHeight > clientHeight) {
+						// Only escape if document is actually scrollable
+						setEscapedFromLock(true);
+						setIsAtBottom(false);
+					}
 				}
+			} else {
+				// Original element mode logic
+				const { target, deltaY } = event;
+				let element = target as HTMLElement | null;
 
-				element = element.parentElement;
-			}
-
-			/**
-			 * The browser may cancel the scrolling from the mouse wheel
-			 * if we update it from the animation in meantime.
-			 * To prevent this, always escape when the wheel is scrolled up.
-			 */
-			if (
-				element === scrollRef.current &&
-				deltaY < 0 &&
-				scrollRef.current.scrollHeight > scrollRef.current.clientHeight &&
-				!state.animation?.ignoreEscapes
-			) {
-				setEscapedFromLock(true);
-				setIsAtBottom(false);
+				// Traverse up to find the scroll container or body/html
+				while (
+					element &&
+					element !== document.body &&
+					element !== document.documentElement
+				) {
+					if (element === scrollRef.current) {
+						// We are scrolling within the designated scroll element
+						const { scrollHeight, clientHeight } = getScrollDimensions();
+						if (
+							deltaY < 0 &&
+							scrollHeight > clientHeight &&
+							!state.animation?.ignoreEscapes
+						) {
+							setEscapedFromLock(true);
+							setIsAtBottom(false);
+						}
+						return; // Stop traversal once scrollRef is found
+					}
+					element = element.parentElement;
+				}
 			}
 		},
-		[setEscapedFromLock, setIsAtBottom, state],
+		[scrollMode, state, setEscapedFromLock, setIsAtBottom, getScrollDimensions], // Added dependencies
 	);
 
-	const scrollRef = useRefCallback((scroll) => {
-		scrollRef.current?.removeEventListener("scroll", handleScroll);
-		scrollRef.current?.removeEventListener("wheel", handleWheel);
-		scroll?.addEventListener("scroll", handleScroll, { passive: true });
-		scroll?.addEventListener("wheel", handleWheel, { passive: true });
-	}, []);
+	// Effect for managing window listeners in document mode
+	useEffect(() => {
+		if (scrollMode === "document") {
+			window.addEventListener("scroll", handleScroll, { passive: true });
+			window.addEventListener("wheel", handleWheel, { passive: true });
+
+			// Initial check in case content loads before effect runs
+			setIsNearBottom(state.isNearBottom);
+			if (!state.escapedFromLock && state.isNearBottom) {
+				setIsAtBottom(true);
+			}
+
+			return () => {
+				window.removeEventListener("scroll", handleScroll);
+				window.removeEventListener("wheel", handleWheel);
+			};
+		}
+		// Intentionally not returning anything for 'element' mode
+		// as listeners are handled by scrollRef callback
+	}, [scrollMode, handleScroll, handleWheel, state, setIsAtBottom]); // Added dependencies
+
+	const scrollRef = useRefCallback(
+		(scroll) => {
+			// Only attach/detach listeners if in element mode
+			if (scrollMode === "element") {
+				scrollRef.current?.removeEventListener("scroll", handleScroll);
+				scrollRef.current?.removeEventListener("wheel", handleWheel);
+				scroll?.addEventListener("scroll", handleScroll, { passive: true });
+				scroll?.addEventListener("wheel", handleWheel, { passive: true });
+			}
+		},
+		[scrollMode, handleScroll, handleWheel],
+	); // Added scrollMode dependency
 
 	const contentRef = useRefCallback((content) => {
 		state.resizeObserver?.disconnect();
@@ -510,6 +637,9 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 		let previousHeight: number | undefined;
 
 		state.resizeObserver = new ResizeObserver(([entry]) => {
+			// Ensure contentRef is still valid before proceeding
+			if (!contentRef.current) return;
+
 			const { height } = entry.contentRect;
 			const difference = height - (previousHeight ?? height);
 
@@ -519,8 +649,10 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 			 * Sometimes the browser can overscroll past the target,
 			 * so check for this and adjust appropriately.
 			 */
-			if (state.scrollTop > state.targetScrollTop) {
-				state.scrollTop = state.targetScrollTop;
+			const currentScrollTop = getScrollTop();
+			const currentTargetScrollTop = state.targetScrollTop; // Use getter
+			if (currentScrollTop > currentTargetScrollTop) {
+				setScrollTop(currentTargetScrollTop); // Use setter
 			}
 
 			setIsNearBottom(state.isNearBottom);
@@ -579,13 +711,15 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 
 	return {
 		contentRef,
-		scrollRef,
+		scrollRef, // Still return scrollRef, might be needed for other purposes or context
 		scrollToBottom,
 		stopScroll,
 		isAtBottom: isAtBottom || isNearBottom,
 		isNearBottom,
 		escapedFromLock,
 		state,
+		// Expose scrollMode if needed by consumers, though StickToBottom component handles it
+		scrollMode,
 	};
 };
 
