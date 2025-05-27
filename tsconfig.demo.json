@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "isolatedDeclarations": false
   },
   "include": ["demo"]
 }
