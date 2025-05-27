@@ -17,6 +17,7 @@ import {
 import {
 	type GetTargetScrollTop,
 	type ScrollToBottom,
+	type StickToBottomInstance,
 	type StickToBottomOptions,
 	type StickToBottomState,
 	type StopScroll,
@@ -43,7 +44,7 @@ export interface StickToBottomProps
 	extends Omit<React.HTMLAttributes<HTMLDivElement>, "children">,
 		StickToBottomOptions {
 	contextRef?: React.Ref<StickToBottomContext>;
-	instance?: ReturnType<typeof useStickToBottom>;
+	instance?: StickToBottomInstance;
 	children: ((context: StickToBottomContext) => ReactNode) | ReactNode;
 }
 
@@ -61,7 +62,7 @@ export function StickToBottom({
 	targetScrollTop: currentTargetScrollTop,
 	contextRef,
 	...props
-}: StickToBottomProps) {
+}: StickToBottomProps): ReactNode {
 	const customTargetScrollTop = useRef<GetTargetScrollTop | null>(null);
 
 	const targetScrollTop = React.useCallback<GetTargetScrollTop>(
@@ -145,7 +146,7 @@ export namespace StickToBottom {
 		children: ((context: StickToBottomContext) => ReactNode) | ReactNode;
 	}
 
-	export function Content({ children, ...props }: ContentProps) {
+	export function Content({ children, ...props }: ContentProps): ReactNode {
 		const context = useStickToBottomContext();
 
 		return (
@@ -167,7 +168,7 @@ export namespace StickToBottom {
 /**
  * Use this hook inside a <StickToBottom> component to gain access to whether the component is at the bottom of the scrollable area.
  */
-export function useStickToBottomContext() {
+export function useStickToBottomContext(): StickToBottomContext {
 	const context = useContext(StickToBottomContext);
 	if (!context) {
 		throw new Error(

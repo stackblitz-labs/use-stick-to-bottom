@@ -146,7 +146,9 @@ globalThis.document?.addEventListener("click", () => {
 	mouseDown = false;
 });
 
-export const useStickToBottom = (options: StickToBottomOptions = {}) => {
+export const useStickToBottom = (
+	options: StickToBottomOptions = {},
+): StickToBottomInstance => {
 	const [escapedFromLock, updateEscapedFromLock] = useState(false);
 	const [isAtBottom, updateIsAtBottom] = useState(options.initial !== false);
 	const [isNearBottom, setIsNearBottom] = useState(false);
@@ -389,7 +391,7 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 		[setIsAtBottom, isSelecting, state],
 	);
 
-	const stopScroll = useCallback(() => {
+	const stopScroll = useCallback((): void => {
 		setEscapedFromLock(true);
 		setIsAtBottom(false);
 	}, [setEscapedFromLock, setIsAtBottom]);
@@ -588,6 +590,19 @@ export const useStickToBottom = (options: StickToBottomOptions = {}) => {
 		state,
 	};
 };
+
+export interface StickToBottomInstance {
+	contentRef: React.MutableRefObject<HTMLElement | null> &
+		React.RefCallback<HTMLElement>;
+	scrollRef: React.MutableRefObject<HTMLElement | null> &
+		React.RefCallback<HTMLElement>;
+	scrollToBottom: ScrollToBottom;
+	stopScroll: StopScroll;
+	isAtBottom: boolean;
+	isNearBottom: boolean;
+	escapedFromLock: boolean;
+	state: StickToBottomState;
+}
 
 function useRefCallback<T extends (ref: HTMLElement | null) => any>(
 	callback: T,
