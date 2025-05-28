@@ -3,7 +3,7 @@
   "author": "Sam Denty <samddenty@gmail.com> (http://samdenty.com/)",
   "description": "A lightweight React Hook intended mainly for AI chat applications, for smoothly sticking to bottom of messages",
   "private": false,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "files": [
     "dist"
@@ -15,7 +15,7 @@
   "scripts": {
     "dev": "vite",
     "build": "rm -rf dist > /dev/null 2>&1; tsc -b",
-    "prepublishOnly": "yarn build",
+    "prepublishOnly": "pnpm build",
     "lint": "biome check",
     "lint:fix": "pnpm lint --write"
   },
