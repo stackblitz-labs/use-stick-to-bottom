@@ -18,7 +18,7 @@ export function useFakeMessages(speed = 1) {
 
   useEffect(() => {
     let wordCount = 0;
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
 
     const update = () => {
       if (wordCount <= 0) {
