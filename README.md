@@ -22,9 +22,15 @@ A lightweight **zero-dependency** React hook + Component that automatically stic
   - Other libraries use easing functions with durations instead, but these doesn't work well when you want to stream in new content with variable sizing - which is common for AI chatbot use cases.
   - `scrollToBottom` returns a `Promise<boolean>` which will resolve to `true` as soon as the scroll was successful, or `false` if the scroll was cancelled.
 
-# Usage
+## Installation
 
-## `<StickToBottom>` Component
+```bash
+npm install use-stick-to-bottom
+```
+
+## Usage
+
+### `<StickToBottom>` Component
 
 ```jsx
 import { StickToBottom, useStickToBottomContext } from 'use-stick-to-bottom';
@@ -60,7 +66,7 @@ function ScrollToBottom() {
 }
 ```
 
-## `useStickToBottom` Hook
+### `useStickToBottom` Hook
 
 ```jsx
 import { useStickToBottom } from 'use-stick-to-bottom';
