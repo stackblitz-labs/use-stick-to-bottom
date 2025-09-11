@@ -155,6 +155,7 @@ export namespace StickToBottom {
 				style={{
 					height: "100%",
 					width: "100%",
+					scrollbarGutter: "stable both-edges",
 				}}
 			>
 				<div {...props} ref={context.contentRef}>
