@@ -14,7 +14,7 @@ function ScrollToBottomButton({isAtBottom, scrollToBottom}: {isAtBottom: boolean
 }
 
 function MessagesContent({ messages }: { messages: React.ReactNode[][] }) {
-    const { scrollRef, contentRef, isAtBottom, scrollToBottom } = useStickToBottom({
+    const { scrollRef, contentRef, isAtBottom, scrollToBottom, stopScroll } = useStickToBottom({
         resize: 'smooth',
         initial: 'smooth'
     });
@@ -42,7 +42,7 @@ function MessagesContent({ messages }: { messages: React.ReactNode[][] }) {
             </div>
 
             <div className="flex justify-center pt-4 sticky bottom-0">
-                <button className="rounded bg-slate-600 text-white px-4 py-2" onClick={() => {}}>
+                <button className="rounded bg-slate-600 text-white px-4 py-2" onClick={() => stopScroll()}>
                     Stop Scroll
                 </button>
             </div>
