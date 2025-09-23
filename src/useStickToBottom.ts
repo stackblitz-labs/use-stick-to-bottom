@@ -398,7 +398,7 @@ export const useStickToBottom = (
 
 	const handleScroll = useCallback(
 		({ target }: Event) => {
-			if (target !== scrollRef.current) {
+			if (target !== document && target !== scrollRef.current) {
 				return;
 			}
 
@@ -469,7 +469,7 @@ export const useStickToBottom = (
 		({ target, deltaY }: WheelEvent) => {
 			let element = target as HTMLElement;
 
-			while (!["scroll", "auto"].includes(getComputedStyle(element).overflow)) {
+			while (element !== document.documentElement && !["scroll", "auto"].includes(getComputedStyle(element).overflow)) {
 				if (!element.parentElement) {
 					return;
 				}
@@ -595,7 +595,7 @@ export interface StickToBottomInstance {
 	contentRef: React.MutableRefObject<HTMLElement | null> &
 		React.RefCallback<HTMLElement>;
 	scrollRef: React.MutableRefObject<HTMLElement | null> &
-		React.RefCallback<HTMLElement>;
+		React.RefCallback<HTMLElement | Window>;
 	scrollToBottom: ScrollToBottom;
 	stopScroll: StopScroll;
 	isAtBottom: boolean;
@@ -610,7 +610,7 @@ function useRefCallback<T extends (ref: HTMLElement | null) => any>(
 ) {
 	// biome-ignore lint/correctness/useExhaustiveDependencies: not needed
 	const result = useCallback((ref: HTMLElement | null) => {
-		result.current = ref;
+		result.current = ref instanceof Window ? document.documentElement : ref;
 		return callback(ref);
 	}, deps) as any as MutableRefObject<HTMLElement | null> &
 		RefCallback<HTMLElement>;
