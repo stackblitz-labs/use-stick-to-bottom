@@ -127,6 +127,8 @@ export type ScrollToBottom = (
 	scrollOptions?: ScrollToBottomOptions,
 ) => Promise<boolean> | boolean;
 export type StopScroll = () => void;
+export type DisableAutoScroll = () => void;
+export type EnableAutoScroll = () => void;
 
 const STICK_TO_BOTTOM_OFFSET_PX = 70;
 const SIXTY_FPS_INTERVAL_MS = 1000 / 60;
@@ -152,7 +154,7 @@ export const useStickToBottom = (
 	const [escapedFromLock, updateEscapedFromLock] = useState(false);
 	const [isAtBottom, updateIsAtBottom] = useState(options.initial !== false);
 	const [isNearBottom, setIsNearBottom] = useState(false);
-
+	const disableAutoScrollRef = useRef(false);
 	const optionsRef = useRef<StickToBottomOptions>(null!);
 	optionsRef.current = options;
 
@@ -353,7 +355,7 @@ export const useStickToBottom = (
 					 * requested animatino.
 					 */
 					if (state.scrollTop < state.calculatedTargetScrollTop) {
-						return scrollToBottom({
+						return internalScrollToBottom({
 							animation: mergeAnimations(
 								optionsRef.current,
 								optionsRef.current.resize,
@@ -391,9 +393,29 @@ export const useStickToBottom = (
 		[setIsAtBottom, isSelecting, state],
 	);
 
-	const stopScroll = useCallback((): void => {
+	const internalScrollToBottom = useCallback<ScrollToBottom>(
+		(scrollOptions) => {
+			if (disableAutoScrollRef.current) return Promise.resolve(false);
+			return scrollToBottom(scrollOptions);
+		},
+		[scrollToBottom],
+	);
+
+	const stopScroll = useCallback<StopScroll>(() => {
 		setEscapedFromLock(true);
 		setIsAtBottom(false);
+	}, [setEscapedFromLock, setIsAtBottom]);
+
+	const disableAutoScroll = useCallback<DisableAutoScroll>(() => {
+		setEscapedFromLock(true);
+		setIsAtBottom(false);
+		disableAutoScrollRef.current = true;
+	}, [setEscapedFromLock, setIsAtBottom]);
+
+	const enableAutoScroll = useCallback<EnableAutoScroll>(() => {
+		setEscapedFromLock(true);
+		setIsAtBottom(false);
+		disableAutoScrollRef.current = false;
 	}, [setEscapedFromLock, setIsAtBottom]);
 
 	const handleScroll = useCallback(
@@ -538,8 +560,7 @@ export const useStickToBottom = (
 						? optionsRef.current.resize
 						: optionsRef.current.initial,
 				);
-
-				scrollToBottom({
+				internalScrollToBottom({
 					animation,
 					wait: true,
 					preserveScrollPosition: true,
@@ -584,6 +605,8 @@ export const useStickToBottom = (
 		scrollRef,
 		scrollToBottom,
 		stopScroll,
+		disableAutoScroll,
+		enableAutoScroll,
 		isAtBottom: isAtBottom || isNearBottom,
 		isNearBottom,
 		escapedFromLock,
@@ -598,6 +621,8 @@ export interface StickToBottomInstance {
 		React.RefCallback<HTMLElement>;
 	scrollToBottom: ScrollToBottom;
 	stopScroll: StopScroll;
+	disableAutoScroll: DisableAutoScroll;
+	enableAutoScroll: EnableAutoScroll;
 	isAtBottom: boolean;
 	isNearBottom: boolean;
 	escapedFromLock: boolean;
