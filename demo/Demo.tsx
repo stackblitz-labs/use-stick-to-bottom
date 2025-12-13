@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { StickToBottom, useStickToBottomContext } from '../src/StickToBottom';
 import { useFakeMessages } from './useFakeMessages';
 
