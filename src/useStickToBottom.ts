@@ -131,6 +131,7 @@ export type StopScroll = () => void;
 const STICK_TO_BOTTOM_OFFSET_PX = 70;
 const SIXTY_FPS_INTERVAL_MS = 1000 / 60;
 const RETAIN_ANIMATION_DURATION_MS = 350;
+const SCROLL_EPSILON_PX = 1;
 
 let mouseDown = false;
 
@@ -252,7 +253,9 @@ export const useStickToBottom = (
 			},
 
 			get scrollDifference() {
-				return this.calculatedTargetScrollTop - this.scrollTop;
+				const difference = this.calculatedTargetScrollTop - this.scrollTop;
+
+				return Math.abs(difference) <= SCROLL_EPSILON_PX ? 0 : difference;
 			},
 
 			get isNearBottom() {
@@ -293,6 +296,7 @@ export const useStickToBottom = (
 				const promise = new Promise(requestAnimationFrame).then(() => {
 					if (!state.isAtBottom) {
 						state.animation = undefined;
+						state.accumulated = 0;
 
 						return false;
 					}
@@ -316,7 +320,9 @@ export const useStickToBottom = (
 					}
 
 					if (
-						scrollTop < Math.min(startTarget, state.calculatedTargetScrollTop)
+						scrollTop <
+						Math.min(startTarget, state.calculatedTargetScrollTop) -
+							SCROLL_EPSILON_PX
 					) {
 						if (state.animation?.behavior === behavior) {
 							if (behavior === "instant") {
@@ -329,10 +335,17 @@ export const useStickToBottom = (
 									behavior.stiffness * state.scrollDifference) /
 								behavior.mass;
 							state.accumulated += state.velocity * tickDelta;
-							state.scrollTop += state.accumulated;
 
-							if (state.scrollTop !== scrollTop) {
-								state.accumulated = 0;
+							const nextScrollTop = Math.min(
+								scrollTop + state.accumulated,
+								state.calculatedTargetScrollTop,
+							);
+							state.scrollTop = nextScrollTop;
+
+							const appliedScroll = state.scrollTop - scrollTop;
+
+							if (Math.abs(appliedScroll) > SCROLL_EPSILON_PX) {
+								state.accumulated -= appliedScroll;
 							}
 						}
 
@@ -345,6 +358,13 @@ export const useStickToBottom = (
 						return next();
 					}
 
+					if (
+						Math.abs(state.scrollTop - state.calculatedTargetScrollTop) <=
+						SCROLL_EPSILON_PX
+					) {
+						state.scrollTop = state.calculatedTargetScrollTop;
+					}
+
 					state.animation = undefined;
 
 					/**
@@ -352,7 +372,10 @@ export const useStickToBottom = (
 					 * up another scroll to the bottom with the last
 					 * requested animatino.
 					 */
-					if (state.scrollTop < state.calculatedTargetScrollTop) {
+					if (
+						state.scrollTop <
+						state.calculatedTargetScrollTop - SCROLL_EPSILON_PX
+					) {
 						return scrollToBottom({
 							animation: mergeAnimations(
 								optionsRef.current,
@@ -371,6 +394,7 @@ export const useStickToBottom = (
 						if (!state.animation) {
 							state.lastTick = undefined;
 							state.velocity = 0;
+							state.accumulated = 0;
 						}
 					});
 
@@ -380,6 +404,7 @@ export const useStickToBottom = (
 
 			if (scrollOptions.wait !== true) {
 				state.animation = undefined;
+				state.accumulated = 0;
 			}
 
 			if (state.animation?.behavior === behavior) {
@@ -408,7 +433,10 @@ export const useStickToBottom = (
 			state.lastScrollTop = scrollTop;
 			state.ignoreScrollToTop = undefined;
 
-			if (ignoreScrollToTop && ignoreScrollToTop > scrollTop) {
+			if (
+				ignoreScrollToTop !== undefined &&
+				ignoreScrollToTop > scrollTop + SCROLL_EPSILON_PX
+			) {
 				/**
 				 * When the user scrolls up while the animation plays, the `scrollTop` may
 				 * not come in separate events; if this happens, to make sure `isScrollingUp`
@@ -430,7 +458,11 @@ export const useStickToBottom = (
 				/**
 				 * When theres a resize difference ignore the resize event.
 				 */
-				if (state.resizeDifference || scrollTop === ignoreScrollToTop) {
+				if (
+					state.resizeDifference ||
+					(ignoreScrollToTop !== undefined &&
+						Math.abs(scrollTop - ignoreScrollToTop) <= SCROLL_EPSILON_PX)
+				) {
 					return;
 				}
 
@@ -440,8 +472,8 @@ export const useStickToBottom = (
 					return;
 				}
 
-				const isScrollingDown = scrollTop > lastScrollTop;
-				const isScrollingUp = scrollTop < lastScrollTop;
+				const isScrollingDown = scrollTop > lastScrollTop + SCROLL_EPSILON_PX;
+				const isScrollingUp = scrollTop < lastScrollTop - SCROLL_EPSILON_PX;
 
 				if (state.animation?.ignoreEscapes) {
 					state.scrollTop = lastScrollTop;
@@ -513,15 +545,22 @@ export const useStickToBottom = (
 
 		state.resizeObserver = new ResizeObserver(([entry]) => {
 			const { height } = entry.contentRect;
-			const difference = height - (previousHeight ?? height);
+			const rawDifference = height - (previousHeight ?? height);
+			const difference =
+				Math.abs(rawDifference) <= SCROLL_EPSILON_PX ? 0 : rawDifference;
 
 			state.resizeDifference = difference;
+
+			if (difference === 0) {
+				previousHeight = height;
+				return;
+			}
 
 			/**
 			 * Sometimes the browser can overscroll past the target,
 			 * so check for this and adjust appropriately.
 			 */
-			if (state.scrollTop > state.targetScrollTop) {
+			if (state.scrollTop > state.targetScrollTop + SCROLL_EPSILON_PX) {
 				state.scrollTop = state.targetScrollTop;
 			}
 
