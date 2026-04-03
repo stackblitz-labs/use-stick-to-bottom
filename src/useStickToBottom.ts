@@ -350,7 +350,7 @@ export const useStickToBottom = (
 					/**
 					 * If we're still below the target, then queue
 					 * up another scroll to the bottom with the last
-					 * requested animatino.
+					 * requested animation.
 					 */
 					if (state.scrollTop < state.calculatedTargetScrollTop) {
 						return scrollToBottom({
