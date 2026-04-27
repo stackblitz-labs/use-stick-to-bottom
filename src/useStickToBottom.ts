@@ -202,8 +202,14 @@ export const useStickToBottom = (
 			},
 			set scrollTop(scrollTop: number) {
 				if (scrollRef.current) {
+					// Override CSS scroll-behavior so programmatic scrollTop
+					// assignments take effect immediately and aren't intercepted
+					// by the browser's smooth scrolling.
+					const { scrollBehavior } = scrollRef.current.style;
+					scrollRef.current.style.scrollBehavior = "auto";
 					scrollRef.current.scrollTop = scrollTop;
 					state.ignoreScrollToTop = scrollRef.current.scrollTop;
+					scrollRef.current.style.scrollBehavior = scrollBehavior;
 				}
 			},
 
