@@ -69,6 +69,21 @@ function ScrollToBottom() {
 }
 ```
 
+`StickToBottom.Content` renders two nested elements: a scroll container and a content wrapper.
+Use `scrollClassName` or `scrollStyle` to style the scroll container itself, for example to customize scrollbars.
+Use `className` and other standard div props to style the content wrapper.
+
+```jsx
+<StickToBottom.Content
+  scrollClassName="scrollbar-none"
+  className="flex flex-col gap-4 p-6"
+>
+  {messages.map((message) => (
+    <Message key={message.id} message={message} />
+  ))}
+</StickToBottom.Content>
+```
+
 ### `useStickToBottom` Hook
 
 ```jsx
