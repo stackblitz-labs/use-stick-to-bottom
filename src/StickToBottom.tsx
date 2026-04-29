@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import {
+	type ReactElement,
 	type ReactNode,
 	createContext,
 	useContext,
@@ -62,7 +63,7 @@ export function StickToBottom({
 	targetScrollTop: currentTargetScrollTop,
 	contextRef,
 	...props
-}: StickToBottomProps): ReactNode {
+}: StickToBottomProps): ReactElement {
 	const customTargetScrollTop = useRef<GetTargetScrollTop | null>(null);
 
 	const targetScrollTop = React.useCallback<GetTargetScrollTop>(
@@ -151,7 +152,7 @@ export namespace StickToBottom {
 		children,
 		scrollClassName,
 		...props
-	}: ContentProps): ReactNode {
+	}: ContentProps): ReactElement {
 		const context = useStickToBottomContext();
 
 		return (
