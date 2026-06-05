@@ -22,6 +22,8 @@ import {
 	type StickToBottomOptions,
 	type StickToBottomState,
 	type StopScroll,
+	type DisableAutoScroll,
+	type EnableAutoScroll,
 	useStickToBottom,
 } from "./useStickToBottom.js";
 
@@ -32,6 +34,8 @@ export interface StickToBottomContext {
 		React.RefCallback<HTMLElement>;
 	scrollToBottom: ScrollToBottom;
 	stopScroll: StopScroll;
+	disableAutoScroll: DisableAutoScroll;
+	enableAutoScroll: EnableAutoScroll;
 	isAtBottom: boolean;
 	escapedFromLock: boolean;
 	get targetScrollTop(): GetTargetScrollTop | null;
@@ -88,6 +92,8 @@ export function StickToBottom({
 		contentRef,
 		scrollToBottom,
 		stopScroll,
+		disableAutoScroll,
+		enableAutoScroll,
 		isAtBottom,
 		escapedFromLock,
 		state,
@@ -97,6 +103,8 @@ export function StickToBottom({
 		() => ({
 			scrollToBottom,
 			stopScroll,
+			disableAutoScroll,
+			enableAutoScroll,
 			scrollRef,
 			isAtBottom,
 			escapedFromLock,
@@ -115,6 +123,8 @@ export function StickToBottom({
 			contentRef,
 			scrollRef,
 			stopScroll,
+			disableAutoScroll,
+			enableAutoScroll,
 			escapedFromLock,
 			state,
 		],

@@ -8,7 +8,7 @@ function ScrollToBottom() {
   return (
     !isAtBottom && (
       <button
-        className="absolute i-ph-arrow-circle-down-fill text-4xl rounded-lg left-[50%] translate-x-[-50%] bottom-0"
+        className='absolute i-ph-arrow-circle-down-fill text-4xl rounded-lg left-[50%] translate-x-[-50%] bottom-0'
         onClick={() => scrollToBottom()}
       />
     )
@@ -16,12 +16,13 @@ function ScrollToBottom() {
 }
 
 function MessagesContent({ messages }: { messages: React.ReactNode[][] }) {
-  const { stopScroll } = useStickToBottomContext();
+  const { stopScroll, disableAutoScroll, enableAutoScroll } = useStickToBottomContext();
+  const [disabled, setDisabled] = useState(false);
 
   return (
     <>
-      <div className="relative w-full flex flex-col overflow-hidden">
-        <StickToBottom.Content className="flex flex-col gap-4 p-6">
+      <div className='relative w-full flex flex-col overflow-hidden'>
+        <StickToBottom.Content className='flex flex-col gap-4 p-6'>
           {[...Array(10)].map((_, i) => (
             <Message key={i}>
               <h1>This is a test</h1>
@@ -36,9 +37,18 @@ function MessagesContent({ messages }: { messages: React.ReactNode[][] }) {
         <ScrollToBottom />
       </div>
 
-      <div className="flex justify-center pt-4">
-        <button className="rounded bg-slate-600 text-white px-4 py-2" onClick={() => stopScroll()}>
+      <div className='flex justify-center pt-4 gap-4'>
+        <button className='rounded bg-slate-600 text-white px-4 py-2' onClick={() => stopScroll()}>
           Stop Scroll
+        </button>
+        <button
+          className='rounded bg-slate-600 text-white px-4 py-2'
+          onClick={() => {
+            setDisabled((prev) => !prev);
+            disabled ? enableAutoScroll() : disableAutoScroll();
+          }}
+        >
+          {disabled ? 'Enable' : 'Disable'} Auto Scroll
         </button>
       </div>
     </>
@@ -49,11 +59,11 @@ function Messages({ animation, speed }: { animation: ScrollBehavior; speed: numb
   const messages = useFakeMessages(speed);
 
   return (
-    <div className="prose flex flex-col gap-2 w-full overflow-hidden">
-      <h2 className="flex justify-center">{animation}:</h2>
+    <div className='prose flex flex-col gap-2 w-full overflow-hidden'>
+      <h2 className='flex justify-center'>{animation}:</h2>
 
       <StickToBottom
-        className="h-[50vh] flex flex-col"
+        className='h-[50vh] flex flex-col'
         resize={animation}
         initial={animation === 'instant' ? 'instant' : { mass: 10 }}
       >
@@ -67,10 +77,10 @@ export function Demo() {
   const [speed, setSpeed] = useState(0.2);
 
   return (
-    <div className="flex flex-col gap-10 p-10 items-center w-full">
+    <div className='flex flex-col gap-10 p-10 items-center w-full'>
       <input
-        className="w-full max-w-screen-lg"
-        type="range"
+        className='w-full max-w-screen-lg'
+        type='range'
         value={speed}
         onChange={(e) => setSpeed(+e.target.value)}
         min={0}
@@ -78,14 +88,14 @@ export function Demo() {
         step={0.01}
       ></input>
 
-      <div className="flex gap-6 w-full max-w-screen-lg">
-        <Messages speed={speed} animation="smooth" />
-        <Messages speed={speed} animation="instant" />
+      <div className='flex gap-6 w-full max-w-screen-lg'>
+        <Messages speed={speed} animation='smooth' />
+        <Messages speed={speed} animation='instant' />
       </div>
     </div>
   );
 }
 
 function Message({ children }: { children: React.ReactNode }) {
-  return <div className="bg-gray-100 rounded-lg p-4 shadow-md break-words">{children}</div>;
+  return <div className='bg-gray-100 rounded-lg p-4 shadow-md break-words'>{children}</div>;
 }
