@@ -55,6 +55,7 @@ const useIsomorphicLayoutEffect =
 export function StickToBottom({
 	instance,
 	children,
+	append,
 	resize,
 	initial,
 	mass,
@@ -78,6 +79,7 @@ export function StickToBottom({
 		mass,
 		damping,
 		stiffness,
+		append,
 		resize,
 		initial,
 		targetScrollTop,

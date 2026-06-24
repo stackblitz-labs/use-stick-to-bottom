@@ -1,3 +1,10 @@
+# Unreleased
+
+- Added `append` / `append={...}` to control automatic scroll-to-bottom when a
+  new direct child is appended to the content element.
+- Added `resize: false` / `resize={false}` to disable automatic
+  ResizeObserver-driven scroll-to-bottom after the initial layout.
+
 # 1.1.0
 
 Stable - Bumped version to signify a release with the new pausing feature https://x.com/samddenty/status/1907636864409817120. Also to start using proper semver, I was using the wrong semver versions for previous releases.

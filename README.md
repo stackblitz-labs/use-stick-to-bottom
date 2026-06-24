@@ -74,7 +74,11 @@ function ScrollToBottom() {
 import { useStickToBottom } from 'use-stick-to-bottom';
 
 function Component() {
-  const { scrollRef, contentRef } = useStickToBottom();
+  const { scrollRef, contentRef } = useStickToBottom({
+    initial: 'smooth',
+    append: 'smooth',
+    resize: false,
+  });
 
   return (
     <div style={{ overflow: 'auto' }} ref={scrollRef}>
@@ -87,3 +91,25 @@ function Component() {
   );
 }
 ```
+
+### Scroll on appended messages only
+
+Use `append` to control automatic scrolling when a new direct child is appended
+to the content element. Set `resize` to `false` to disable automatic scrolling
+for height changes that do not append a new direct child, such as streaming text
+growth, image loading, markdown reflow, or window resize.
+
+```jsx
+const { scrollRef, contentRef } = useStickToBottom({
+  initial: 'smooth',
+  append: 'smooth',
+  resize: false,
+});
+```
+
+With these options, the hook scrolls when a new message element is appended and
+the user was already at the bottom. It does not keep sticking to the bottom while
+that message grows or the window resizes.
+
+If `append` is omitted, appended children use the `resize` option, preserving the
+previous behavior.
