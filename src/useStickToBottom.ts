@@ -36,6 +36,7 @@ export interface StickToBottomState {
 	isNearBottom: boolean;
 
 	resizeObserver?: ResizeObserver;
+	scrollResizeObserver?: ResizeObserver;
 }
 
 const DEFAULT_SPRING_ANIMATION = {
@@ -513,6 +514,69 @@ export const useStickToBottom = (
 		scrollRef.current?.removeEventListener("wheel", handleWheel);
 		scroll?.addEventListener("scroll", handleScroll, { passive: true });
 		scroll?.addEventListener("wheel", handleWheel, { passive: true });
+
+		state.scrollResizeObserver?.disconnect();
+		state.scrollResizeObserver = undefined;
+
+		if (!scroll) {
+			return;
+		}
+
+		let previousHeight: number | undefined;
+
+		state.scrollResizeObserver = new ResizeObserver(([entry]) => {
+			const { height } = entry.contentRect;
+			const difference = height - (previousHeight ?? height);
+
+			previousHeight = height;
+
+			if (!difference) {
+				return;
+			}
+
+			state.resizeDifference = difference;
+
+			setIsNearBottom(state.isNearBottom);
+
+			/**
+			 * When the scroll container itself shrinks (e.g. a flex sibling
+			 * grows), the content element doesn't change size so the content
+			 * ResizeObserver never fires - re-anchor to the bottom if we
+			 * were stuck there. A growing container needs no scroll, since
+			 * the browser clamps scrollTop for us.
+			 */
+			if (difference < 0 && state.isAtBottom) {
+				const animation = mergeAnimations(
+					optionsRef.current,
+					optionsRef.current.resize,
+				);
+
+				scrollToBottom({
+					animation,
+					wait: true,
+					preserveScrollPosition: true,
+					duration:
+						animation === "instant" ? undefined : RETAIN_ANIMATION_DURATION_MS,
+				});
+			}
+
+			/**
+			 * Reset the resize difference after the scroll event
+			 * has fired. Requires a rAF to wait for the scroll event,
+			 * and a setTimeout to wait for the other timeout we have in
+			 * resizeObserver in case the scroll event happens after the
+			 * resize event.
+			 */
+			requestAnimationFrame(() => {
+				setTimeout(() => {
+					if (state.resizeDifference === difference) {
+						state.resizeDifference = 0;
+					}
+				}, 1);
+			});
+		});
+
+		state.scrollResizeObserver.observe(scroll);
 	}, []);
 
 	const contentRef = useRefCallback((content) => {
