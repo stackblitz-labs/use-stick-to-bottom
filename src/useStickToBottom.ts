@@ -174,11 +174,19 @@ export const useStickToBottom = (
 	}, []);
 
 	const setIsAtBottom = useCallback((isAtBottom: boolean) => {
+		if (state.isAtBottom === isAtBottom) {
+			return;
+		}
+
 		state.isAtBottom = isAtBottom;
 		updateIsAtBottom(isAtBottom);
 	}, []);
 
 	const setEscapedFromLock = useCallback((escapedFromLock: boolean) => {
+		if (state.escapedFromLock === escapedFromLock) {
+			return;
+		}
+
 		state.escapedFromLock = escapedFromLock;
 		updateEscapedFromLock(escapedFromLock);
 	}, []);
