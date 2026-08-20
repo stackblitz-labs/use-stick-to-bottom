@@ -433,6 +433,32 @@ export const useStickToBottom = (
 			setIsNearBottom(state.isNearBottom);
 
 			/**
+			 * A scroll that we didn't perform ourselves (`ignoreScrollToTop` is
+			 * unset), that moves upwards, and that lands away from the target can
+			 * only have come from the user - a resize never moves the reader away
+			 * from the bottom. Growing content leaves `scrollTop` untouched, and
+			 * shrinking content only ever clamps it towards the bottom.
+			 *
+			 * This has to be recognised here rather than in the deferred handler
+			 * below, because that one bails out for as long as a resize is in
+			 * progress, which during streaming is very nearly always.
+			 */
+			const isUserEscape =
+				ignoreScrollToTop === undefined &&
+				scrollTop < lastScrollTop &&
+				!state.isNearBottom;
+
+			if (
+				isUserEscape &&
+				state.resizeDifference &&
+				!state.animation?.ignoreEscapes
+			) {
+				setEscapedFromLock(true);
+				setIsAtBottom(false);
+				return;
+			}
+
+			/**
 			 * Scroll events may come before a ResizeObserver event,
 			 * so in order to ignore resize events correctly we use a
 			 * timeout.
@@ -441,9 +467,15 @@ export const useStickToBottom = (
 			 */
 			setTimeout(() => {
 				/**
-				 * When theres a resize difference ignore the resize event.
+				 * When theres a resize difference ignore the resize event, unless
+				 * the user escaped the lock - the scroll event can arrive before
+				 * the resize event it belongs to, so a user escape can still be
+				 * sitting here once the resize difference has been set.
 				 */
-				if (state.resizeDifference || scrollTop === ignoreScrollToTop) {
+				if (
+					(state.resizeDifference && !isUserEscape) ||
+					scrollTop === ignoreScrollToTop
+				) {
 					return;
 				}
 
